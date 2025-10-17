@@ -26,11 +26,7 @@ import animationData from "../assets/animation/typing.json";
 import { useTheme } from "../context/useTheme.ts";
 import { decryptMessage, encryptMessage } from "../customHooks/useKeys.ts";
 
-interface propsType{
-  publicKey:string,
-  privateKey:Uint8Array | null
-}
-const MessageArea = (props:propsType) => {
+const MessageArea = () => {
   const {theme}=useTheme();
   const {currentUser,selectedUser,onlineUsers,otherUsers} = useSelector(
     (state: RootState) => state.userSlice
@@ -49,7 +45,7 @@ const MessageArea = (props:propsType) => {
   const [backendImage, setBackendImage] = useState<File>();
   const [loading,setLoading]=useState<boolean>(false);
   const [isCalling, setIsCalling] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<any>(null);
+  const [incomingCall, setIncomingCall] = useState<{ from: string; offer: RTCSessionDescriptionInit }|null>(null);
   const [callAccepted, setCallAccepted] = useState(false);
   const [callerName, setCallerName] = useState("");
   

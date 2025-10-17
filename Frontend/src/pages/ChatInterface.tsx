@@ -68,7 +68,7 @@ if (privateKey) {
   return (
     <div className='flex w-full h-full overflow-hidden fixed top-20 left-0 right-0'>
       <Sidebar />
-      <MessageArea publicKey={publicKey} privateKey={privateKey} />
+      <MessageArea  />
     </div>
   )
 }

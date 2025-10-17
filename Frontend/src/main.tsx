@@ -10,7 +10,7 @@ import { ThemeProvider } from './context/ThemeProvider.tsx';
 import { dark } from "@clerk/themes";
 import { useTheme } from './context/useTheme.ts';
 
-const Root = () => {
+export const Root = () => {
   const { theme } = useTheme();
 
   return (

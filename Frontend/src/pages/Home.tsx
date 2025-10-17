@@ -5,7 +5,6 @@ import { BiVideo } from "react-icons/bi";
 import { MdDarkMode } from "react-icons/md";
 import { CiLight } from "react-icons/ci";
 import { useTheme } from "../context/useTheme";
-import { dark } from "@clerk/themes";
 
 const Home = () => {
   const { theme, toggleTheme } = useTheme();
