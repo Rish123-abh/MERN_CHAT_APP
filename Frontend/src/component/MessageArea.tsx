@@ -395,10 +395,10 @@ useEffect(() => {
     setIsCalling(false);
   };
 
-  const handleEndCall = () => {
+  const handleEndCall = (emit = true) => {
     cleanupPeerConnection();
 
-    if (selectedUser?._id) {
+    if (emit && selectedUser?._id) {
       socket?.emit("end-call", { to: selectedUser._id });
     }
 
@@ -437,8 +437,9 @@ useEffect(() => {
     return ()=>{socket?.off("newMessage")};
   },[Messages,dispatch,socket]);
 
+  const listenersAdded = useRef(false);
   useEffect(() => {
-    if (!socket) return;
+    if (!socket || listenersAdded.current) return;
 
     const handleIncomingCall = ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
       console.log("Incoming call from:", from);
@@ -490,7 +491,7 @@ useEffect(() => {
 
     const handleCallEnded = () => {
       console.log("Call ended by remote peer");
-      handleEndCall();
+      handleEndCall(false);
     };
 
     const handleCallRejected = () => {
@@ -510,7 +511,7 @@ useEffect(() => {
     socket.on("call-rejected", handleCallRejected);
     socket.on("typing", handleTyping);
     socket.on("stop typing", handleStopTyping);
-
+    listenersAdded.current = true;
     return () => {
       socket.off("incoming-call", handleIncomingCall);
       socket.off("call-answered", handleCallAnswered);
@@ -520,7 +521,7 @@ useEffect(() => {
       socket.off("typing", handleTyping);
       socket.off("stop typing", handleStopTyping);
     };
-  }, [socket, selectedUser, otherUsers]);
+  }, [socket,otherUsers]);
 
   const debouncedStopTyping = useMemo(() => {
     return debounce(() => {
@@ -712,7 +713,7 @@ useEffect(() => {
                   className="absolute bottom-4 right-4 w-32 h-24 md:w-40 md:h-32 rounded-md border-2 border-white object-cover" 
                 />
                 <button
-                  onClick={handleEndCall}
+                  onClick={()=>handleEndCall()}
                   className="absolute top-3 right-3 bg-red-500 px-3 py-2 rounded-md text-white hover:bg-red-600"
                 >
                   End Call
