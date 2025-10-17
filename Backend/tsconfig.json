@@ -1,9 +1,11 @@
 {
   "compilerOptions": {
     "target": "ES2020",
-    "module": "ESNext",
+    // "module": "ESNext",
+    "module": "NodeNext",             // Changed
+    "moduleResolution": "NodeNext",
     "typeRoots": ["./types", "./node_modules/@types"],
-    "moduleResolution": "node",
+    // "moduleResolution": "node",
     "allowSyntheticDefaultImports": true,
     "allowJs": true,
     "outDir": "./dist",
