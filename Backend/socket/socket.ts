@@ -3,13 +3,15 @@ import express from 'express';
 import { Server } from 'socket.io';
 import Message from '../models/message.model.js';
 const app=express();
+import dotenv from 'dotenv';
+dotenv.config();
 
 const server=http.createServer(app);
 
 const io=new Server(server,{
    cors:{
-    // origin:"http://localhost:5173"
-    origin:"*"
+    origin:process.env.FRONTEND_URL,
+    // origin:"*"
    } 
 });
 type mapType={
