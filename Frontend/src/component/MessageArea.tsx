@@ -181,6 +181,8 @@ useEffect(() => {
           if(!keyToUse){
             return;
           }
+          console.log("Decrypting message with key:", keyToUse);
+          console.log("Prrivate Key Array:", privateKeyArray);
           const plainText = await decryptMessage(
             msg.message,
             msg.nonce,
@@ -572,6 +574,9 @@ const handleEndCall = (emit = true) => {
       
     const decryptedMessage = { ...message };
     try {
+      
+          console.log("Sender Public key :", message.sender.publicKey);
+          console.log("Private Key Array inside effect:", privateKeyArray);
       decryptedMessage.message = await decryptMessage(
         message.message,
         message.nonce,
@@ -703,6 +708,8 @@ const handleEndCall = (emit = true) => {
     if(!selectedUser?.publicKey){
       return;
     }
+    console.log("Public key encryption ", selectedUser?.publicKey);
+    console.log("Private  key encryption :", privateKeyArray);
       const { ciphertext, nonce } = await encryptMessage(message, selectedUser?.publicKey, privateKeyArray);
     const formData:FormData=new FormData();
 
@@ -723,6 +730,8 @@ const handleEndCall = (emit = true) => {
         },
       );
         let plainTextMessage = message;
+          console.log("Handle Send message:", selectedUser?.publicKey);
+          console.log("Prrivate Key Array: in handle", privateKeyArray);
       plainTextMessage = await decryptMessage(
         ciphertext,
         nonce,
