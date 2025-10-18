@@ -26,19 +26,19 @@ export const verifyClerkWebhook = async(req: Request, res: Response) => {
     const { type, data } = event;
     console.log('Received event:', type,data);
     switch (type) {
-      case 'user.created': {
-        const { id, username, email_addresses, profile_image_url } = data;
-        const email = email_addresses?.[0]?.email_address || '';
-        await User.create({
-          clerkId: id,
-          username: username || 'Anonymous',
-          email,
-          image: profile_image_url
-        })
-          .then(() => console.log('User created in DB:', id))
-          .catch(err => console.error('Error creating user:', err));
-        break;
-      }
+      // case 'user.created': {
+      //   const { id, username, email_addresses, profile_image_url } = data;
+      //   const email = email_addresses?.[0]?.email_address || '';
+      //   await User.create({
+      //     clerkId: id,
+      //     username: username || 'Anonymous',
+      //     email,
+      //     image: profile_image_url
+      //   })
+      //     .then(() => console.log('User created in DB:', id))
+      //     .catch(err => console.error('Error creating user:', err));
+      //   break;
+      // }
 
       case 'user.updated': {
         const { id, username, email_addresses, profile_image_url } = data;
@@ -71,14 +71,14 @@ export const verifyClerkWebhook = async(req: Request, res: Response) => {
     res.status(400).send('Invalid signature');
   }
 };
-export const publicKeySaveinDb= async (req:Request, res:Response) => {
-  const { publicKey } = req.body;
-  const clerkId = req.auth?.().userId as any; // middleware or token from Clerk
-  if (!publicKey) return res.status(400).send("Missing publicKey");
+// export const publicKeySaveinDb= async (req:Request, res:Response) => {
+//   const { publicKey } = req.body;
+//   const clerkId = req.auth?.().userId as any; // middleware or token from Clerk
+//   if (!publicKey) return res.status(400).send("Missing publicKey");
 
-  await User.findOneAndUpdate({ clerkId }, { publicKey });
-  res.status(200).send("Public key saved");
-};
+//   await User.findOneAndUpdate({ clerkId }, { publicKey });
+//   res.status(200).send("Public key saved");
+// };
 
 export const getAllUsers = async (req: Request, res: Response) => {
   try {
@@ -116,26 +116,46 @@ export const getAllUsers = async (req: Request, res: Response) => {
   }
 }
 
-export const getCurrentUser = async (req: Request, res: Response) => {
+export const getOrCreateUser = async (req: Request, res: Response) => {
   try {
-    const clerkId = req.auth?.().userId as any;
-    if (!clerkId) {
-      return res.status(401).json({ message: "Unauthorized: Clerk ID not found" });
+    // ✅ The crucial type guard: Check for userId directly on the auth object.
+    if (!req.auth?.().userId) {
+      return res.status(401).json({ message: "You must be logged in to perform this action." });
     }
-    const user = await User.findOne({
-      clerkId: clerkId
-    })
-    if (!user) {
-      return res.status(401).json({ message: " User not found " });
 
-    }
-    return res.status(200).json(user);
-  }
-  catch (error) {
-    return res.status(500).json({ message: `Internal Server Error ${error}` })
-  }
-}
+    // After the check above, assert the auth object shape and extract safely.
+    const auth = req.auth?.() as { userId: string; user?: any };
+    const userId = auth.userId;
+    const clerkUser = auth.user;
+    const { publicKey } = req.body;
 
+    // "Get or Create" the user in one atomic operation.
+    const dbUser = await User.findOneAndUpdate(
+      { clerkId: userId },
+      {
+        $setOnInsert: { // Only sets these fields when creating a NEW user
+          clerkId: userId,
+          username: clerkUser?.username || 'Anonymous',
+          email: clerkUser?.emailAddresses[0]?.emailAddress || '',
+          image: clerkUser?.imageUrl || ''
+        },
+        $set: { // Always updates or sets the public key
+          publicKey: publicKey 
+        }
+      },
+      { 
+        new: true,    // Return the new/updated document
+        upsert: true  // Create the document if it doesn't exist
+      } 
+    );
+
+    return res.status(200).json(dbUser);
+
+  } catch (error) {
+    console.error("Error in get/create user:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
 
 export const searchUsers = async (req: Request, res: Response) => {
   const clerkId = req.auth?.().userId as any;
