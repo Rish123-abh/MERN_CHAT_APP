@@ -264,24 +264,29 @@ useEffect(() => {
       ] 
     });
 
-    pc.ontrack = event => {
-  console.log("Remote track received", event.streams[0]);
-  setRemoteStream(event.streams[0]);
-  if (remoteVideoRef.current && event.streams[0]) {
-    // 1. Attach the stream to the video element
-    remoteVideoRef.current.srcObject = event.streams[0];
+pc.ontrack = event => {
+  const incomingStream = event.streams[0];
+  if (!incomingStream) return;
 
-    // 2. Explicitly tell the video to play
+  // Prevent re-attaching the same stream repeatedly
+  if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
+    console.log("Remote track received", incomingStream);
+    remoteVideoRef.current.srcObject = incomingStream;
+    setRemoteStream(incomingStream);
+
+    // Try to play once
     const playPromise = remoteVideoRef.current.play();
-
     if (playPromise !== undefined) {
       playPromise.catch(error => {
-        console.error("Autoplay was prevented:", error);
-        // As a fallback, you could show a "Click to play" button here
+        console.warn("Autoplay warning:", error);
+        // Optionally show a manual play button here
       });
     }
+  } else {
+    console.log("Remote track already attached, skipping duplicate");
   }
 };
+
 
     pc.onicecandidate = event => {
       if (event.candidate) {
@@ -752,7 +757,7 @@ useEffect(() => {
                 />
                 <button
                   onClick={()=>handleEndCall()}
-                  className="absolute bottom-60 right-3 bg-red-500 px-3 py-2 rounded-md text-white hover:bg-red-600"
+                  className="absolute bottom-30 md:bottom-60 right-3 bg-red-500 px-3 py-2 rounded-md text-white hover:bg-red-600"
                 >
                   End Call
                 </button>
