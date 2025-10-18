@@ -217,14 +217,9 @@ useEffect(() => {
 
 // This effect handles attaching the remote stream
 useEffect(() => {
-  if (remoteVideoRef.current && remoteStream) {
-    if (remoteVideoRef.current.srcObject !== remoteStream) {
-      console.log("Attaching remote stream to video element.");
-      remoteVideoRef.current.srcObject = remoteStream;
-      
-      // Attempt to play every time, as user interaction might be needed
-      remoteVideoRef.current.play().catch(e => console.error("Remote play failed", e));
-    }
+  if (remoteVideoRef.current && remoteStream && !remoteVideoRef.current.srcObject) {
+    remoteVideoRef.current.srcObject = remoteStream;
+    remoteVideoRef.current.play().catch(err => console.warn("Autoplay warning:", err));
   }
 }, [remoteStream]);
 
@@ -265,26 +260,31 @@ useEffect(() => {
     });
 
 pc.ontrack = event => {
-  const incomingStream = event.streams[0];
-  if (!incomingStream) return;
-
-  // Prevent re-attaching the same stream repeatedly
-  if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
+   const incomingStream = event.streams[0];
+  if (incomingStream) {
     console.log("Remote track received", incomingStream);
-    remoteVideoRef.current.srcObject = incomingStream;
     setRemoteStream(incomingStream);
-
-    // Try to play once
-    const playPromise = remoteVideoRef.current.play();
-    if (playPromise !== undefined) {
-      playPromise.catch(error => {
-        console.warn("Autoplay warning:", error);
-        // Optionally show a manual play button here
-      });
-    }
-  } else {
-    console.log("Remote track already attached, skipping duplicate");
   }
+  // const incomingStream = event.streams[0];
+  // if (!incomingStream) return;
+
+  // // Prevent re-attaching the same stream repeatedly
+  // if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
+  //   console.log("Remote track received", incomingStream);
+  //   remoteVideoRef.current.srcObject = incomingStream;
+  //   setRemoteStream(incomingStream);
+
+  //   // Try to play once
+  //   const playPromise = remoteVideoRef.current.play();
+  //   if (playPromise !== undefined) {
+  //     playPromise.catch(error => {
+  //       console.warn("Autoplay warning:", error);
+  //       // Optionally show a manual play button here
+  //     });
+  //   }
+  // } else {
+  //   console.log("Remote track already attached, skipping duplicate");
+  // }
 };
 
 
