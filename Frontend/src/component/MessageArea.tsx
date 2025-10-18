@@ -341,7 +341,7 @@ pc.ontrack = (event) => {
 
     // ✅ Step 1: Ensure camera/mic access with stable constraints
     const localStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      video: true,
       audio: { echoCancellation: true, noiseSuppression: true }
     });
 
@@ -408,7 +408,7 @@ pc.ontrack = (event) => {
 
     // ✅ Step 1: Ensure camera/mic access with better constraints
     const localStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      video: true,
       audio: { echoCancellation: true, noiseSuppression: true }
     });
 
