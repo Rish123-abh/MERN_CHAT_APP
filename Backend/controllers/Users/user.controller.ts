@@ -3,7 +3,7 @@ import User, { IUser } from '../../models/user.model.js';
 import { Webhook } from 'svix';
 import Conversation from '../../models/conversation.model.js';
 
-export const verifyClerkWebhook = (req: Request, res: Response) => {
+export const verifyClerkWebhook = async(req: Request, res: Response) => {
   const CLERK_WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || '';
 
   try {
@@ -29,7 +29,7 @@ export const verifyClerkWebhook = (req: Request, res: Response) => {
       case 'user.created': {
         const { id, username, email_addresses, profile_image_url } = data;
         const email = email_addresses?.[0]?.email_address || '';
-        User.create({
+        await User.create({
           clerkId: id,
           username: username || 'Anonymous',
           email,
@@ -43,7 +43,7 @@ export const verifyClerkWebhook = (req: Request, res: Response) => {
       case 'user.updated': {
         const { id, username, email_addresses, profile_image_url } = data;
         const email = email_addresses?.[0]?.email_address || '';
-        User.findOneAndUpdate(
+        await User.findOneAndUpdate(
           { clerkId: id },
           { username, email, image: profile_image_url },
           { new: true, upsert: true } // upsert:true will create a new user if not found
@@ -55,7 +55,7 @@ export const verifyClerkWebhook = (req: Request, res: Response) => {
 
       case 'user.deleted': {
         const { id } = data;
-        User.findOneAndDelete({ clerkId: id })
+        await User.findOneAndDelete({ clerkId: id })
           .then(() => console.log('User deleted from DB:', id))
           .catch(err => console.error('Error deleting user:', err));
         break;
