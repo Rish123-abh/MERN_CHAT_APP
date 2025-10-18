@@ -227,25 +227,16 @@ useEffect(() => {
   if (!videoEl || !remoteStream) return;
 
   if (videoEl.srcObject !== remoteStream) {
-    console.log("Attaching remote stream (useEffect).");
+    console.log("Attaching remote stream to video element:", remoteStream.id);
     videoEl.srcObject = remoteStream;
-    videoEl.play().catch(err => console.warn("Autoplay warning:", err));
-  }
-}, [remoteStream, remoteVideoRef.current]);
 
-useEffect(() => {
-  const videoEl = remoteVideoRef.current;
-  if (!videoEl || !remoteStream) return;
-
-  console.log("🔄 Attaching remote stream (useEffect):", remoteStream.id);
-
-  if (videoEl.srcObject !== remoteStream) {
-    videoEl.srcObject = remoteStream;
-  }
-
-  const playPromise = videoEl.play();
-  if (playPromise) {
-    playPromise.catch(err => console.warn("⚠️ Remote video autoplay prevented:", err));
+    // Delay play slightly to avoid AbortError
+    setTimeout(() => {
+      const playPromise = videoEl.play();
+      if (playPromise) {
+        playPromise.catch(err => console.warn("⚠️ Remote video autoplay prevented:", err));
+      }
+    }, 100);
   }
 }, [remoteStream]);
 
@@ -286,55 +277,36 @@ useEffect(() => {
       ] 
     });
     
-pc.ontrack = event => {
+// pc.ontrack = event => {
+//   const [stream] = event.streams;
+//   if (!stream) return;
+//   console.log("🎥 Remote track received:", stream.id);
+
+//   // Always update state
+//   setRemoteStream(stream);
+
+//   // Attach directly if <video> is ready
+//   const videoEl = remoteVideoRef.current;
+//   if (videoEl) {
+//     if (videoEl.srcObject !== stream) {
+//       videoEl.srcObject = stream;
+//       const playPromise = videoEl.play();
+//       if (playPromise) {
+//         playPromise.catch(err => console.warn("Autoplay prevented:", err));
+//       }
+//     }
+//   }
+// };
+
+pc.ontrack = (event) => {
   const [stream] = event.streams;
   if (!stream) return;
   console.log("🎥 Remote track received:", stream.id);
 
-  // Always update state
+  // Only update state, useEffect handles attaching to <video>
   setRemoteStream(stream);
-
-  // Attach directly if <video> is ready
-  const videoEl = remoteVideoRef.current;
-  if (videoEl) {
-    if (videoEl.srcObject !== stream) {
-      videoEl.srcObject = stream;
-      const playPromise = videoEl.play();
-      if (playPromise) {
-        playPromise.catch(err => console.warn("Autoplay prevented:", err));
-      }
-    }
-  }
 };
 
-
-// pc.ontrack = event => {
-//    const incomingStream = event.streams[0];
-//   if (incomingStream) {
-//     console.log("Remote track received", incomingStream);
-//     setRemoteStream(incomingStream);
-//   }
-  // const incomingStream = event.streams[0];
-  // if (!incomingStream) return;
-
-  // // Prevent re-attaching the same stream repeatedly
-  // if (remoteVideoRef.current && !remoteVideoRef.current.srcObject) {
-  //   console.log("Remote track received", incomingStream);
-  //   remoteVideoRef.current.srcObject = incomingStream;
-  //   setRemoteStream(incomingStream);
-
-  //   // Try to play once
-  //   const playPromise = remoteVideoRef.current.play();
-  //   if (playPromise !== undefined) {
-  //     playPromise.catch(error => {
-  //       console.warn("Autoplay warning:", error);
-  //       // Optionally show a manual play button here
-  //     });
-  //   }
-  // } else {
-  //   console.log("Remote track already attached, skipping duplicate");
-  // }
-// };
 
 
     pc.onicecandidate = event => {
