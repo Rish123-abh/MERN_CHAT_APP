@@ -11,11 +11,8 @@ const App = () => {
   const {currentUser}=useSelector((state:RootState)=>state.userSlice);
   const dispatch=useDispatch();
   const {isSignedIn} =useUser();
-  const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  console.log("DarkMode",isDarkMode);
 
   const socket=useSocket();
-  console.log("Socketvalue",socket);
 useEffect(() => {
   if (!socket) return; // wait until socket is initialized
  socket.emit("setup", currentUser?._id); 
@@ -26,7 +23,6 @@ useEffect(() => {
 
   // online users event
   socket.on("getOnlineUsers", (users: string[]) => {
-    console.log("Online users:", users);
     dispatch(setOnlineUsers(users));
   });
 

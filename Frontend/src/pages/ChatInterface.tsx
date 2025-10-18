@@ -56,7 +56,6 @@ if (privateKey) {
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
-      console.log("Public key saved to DB");
     } catch (err) {
       console.error("Failed to save public key:", err);
     }

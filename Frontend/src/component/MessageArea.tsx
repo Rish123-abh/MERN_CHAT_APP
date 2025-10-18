@@ -181,7 +181,6 @@ useEffect(() => {
           if(!keyToUse){
             return;
           }
-          console.log("Decrypting message:", msg);
           const plainText = await decryptMessage(
             msg.message,
             msg.nonce,
@@ -196,7 +195,6 @@ useEffect(() => {
       })
     );
       dispatch(setConversationMessage(decryptedMessages));
-      console.log("Get Message",result.data);
     } catch (error) {
       dispatch(setConversationMessage([]));
       console.log(error);
@@ -212,7 +210,6 @@ useEffect(() => {
   if (!videoEl || !localStream) return;
 
   if (videoEl.srcObject !== localStream) {
-    console.log("Attaching local stream to video element.");
     videoEl.srcObject = localStream;
     videoEl.muted = true;
     
@@ -220,7 +217,6 @@ useEffect(() => {
     const playVideo = async () => {
       try {
         await videoEl.play();
-        console.log("✅ Local video playing");
       } catch (err) {
         console.warn("⚠️ Local video autoplay prevented:", err);
       }
@@ -240,44 +236,27 @@ useEffect(() => {
 
 useEffect(() => {
   const videoEl = remoteVideoRef.current;
-  
-  console.log("🎬 Remote stream effect triggered:", {
-    hasVideoEl: !!videoEl,
-    hasRemoteStream: !!remoteStream,
-    streamId: remoteStream?.id,
-    trackCount: remoteStream?.getTracks().length
-  });
 
   if (!videoEl || !remoteStream) return;
 
   // Prevent re-attaching the same stream
   if (videoEl.srcObject === remoteStream) {
-    console.log("⚠️ Stream already attached, skipping");
     return;
   }
 
-  console.log("📺 Attaching remote stream to video element:", remoteStream.id);
-  console.log("📺 Remote stream tracks:", remoteStream.getTracks().map(t => ({
-    kind: t.kind,
-    enabled: t.enabled,
-    readyState: t.readyState
-  })));
 
   videoEl.srcObject = remoteStream;
 
   // Use a more reliable play approach
   const playVideo = async () => {
     try {
-      console.log("▶️ Attempting to play remote video...");
       await videoEl.play();
-      console.log("✅ Remote video playing successfully");
     } catch (err) {
       console.warn("⚠️ Remote video autoplay prevented:", err);
       // Fallback: try again after a short delay
       setTimeout(async () => {
         try {
           await videoEl.play();
-          console.log("✅ Remote video playing (retry)");
         } catch (retryErr) {
           console.error("❌ Failed to play remote video:", retryErr);
         }
@@ -287,12 +266,9 @@ useEffect(() => {
 
   // Wait for metadata to load before playing
   if (videoEl.readyState >= 2) { // HAVE_CURRENT_DATA or higher
-    console.log("✅ Video ready state sufficient, playing now");
     playVideo();
   } else {
-    console.log("⏳ Waiting for video metadata...");
     videoEl.onloadedmetadata = () => {
-      console.log("✅ Video metadata loaded");
       playVideo();
     };
   }
@@ -375,30 +351,18 @@ const iceServers = await response.json();
     
   pc.ontrack = (event) => {
     const [stream] = event.streams;
-    console.log("🎥 ontrack event fired:", {
-      stream: stream?.id,
-      tracks: stream?.getTracks().map(t => ({
-        kind: t.kind,
-        enabled: t.enabled,
-        readyState: t.readyState,
-        id: t.id
-      })),
-      totalStreams: event.streams.length
-    });
     
     if (!stream) {
       console.error("❌ No stream in ontrack event!");
       return;
     }
     
-    console.log("✅ Setting remote stream to state");
     setRemoteStream(stream);
   };
 
   pc.onicecandidate = event => {
     if (event.candidate) {
       const targetId = isInitiator ? selectedUser?._id : incomingCall?.from;
-      console.log("📤 Sending ICE candidate to:", targetId, "Type:", event.candidate.type);
       socket?.emit("ice-candidate", { 
         to: targetId, 
         candidate: event.candidate 
@@ -409,7 +373,6 @@ const iceServers = await response.json();
   };
 
   pc.oniceconnectionstatechange = () => {
-    console.log("🔗 ICE Connection State:", pc.iceConnectionState);
     
     // Give more time before considering it failed
     if (pc.iceConnectionState === 'failed') {
@@ -457,7 +420,6 @@ const iceServers = await response.json();
 
 setLocalStream(localStream);
 localStreamRef.current = localStream;
-console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getTracks().length);
 
     // ✅ Step 2: Attach local video with slight delay (avoids autoplay AbortError)
     const localEl = localVideoRef.current;
@@ -486,7 +448,6 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
     await pc.setLocalDescription(offer);
 
     // ✅ Step 6: Send offer through signaling
-    console.log("📞 Sending call to:", selectedUser._id);
     socket?.emit("call-user", { 
       to: selectedUser._id, 
       offer,
@@ -505,7 +466,6 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
   if (!incomingCall) return;
 
   try {
-    console.log("📞 Accepting call from:", incomingCall.from);
     cleanupPeerConnection();
     setCallAccepted(true);
 
@@ -515,7 +475,6 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
       audio: true
     });
 
-    console.log("✅ Got local stream:", localStream.id);
     setLocalStream(localStream);
     localStreamRef.current = localStream;
 
@@ -536,18 +495,15 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
     peerConnectionRef.current = pc;
 
     // Step 3: Add local tracks FIRST (before setting remote description)
-    console.log("➕ Adding local tracks to peer connection");
     localStream.getTracks().forEach(track => {
       const sender = pc.addTrack(track, localStream);
       console.log(`Added ${track.kind} track:`, sender);
     });
 
     // Step 4: Set remote description
-    console.log("📥 Setting remote description (offer)");
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
 
     // Step 5: Add pending ICE candidates
-    console.log("🧊 Processing", pendingCandidatesRef.current.length, "pending ICE candidates");
     for (const candidate of pendingCandidatesRef.current) {
       try {
         await pc.addIceCandidate(candidate);
@@ -558,24 +514,19 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
     pendingCandidatesRef.current = [];
 
     // Step 6: Create and send answer
-    console.log("📤 Creating answer");
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-
-    console.log("📤 Sending answer to:", incomingCall.from);
     socket?.emit("answer-call", { 
       to: incomingCall.from, 
       answer 
     });
 
     setIncomingCall(null);
-    console.log("✅ Call accepted successfully");
   } catch (error) {
     console.error("❌ Error accepting call:", error);
     handleRejectCall();
   }
 };
-console.log(peerConnectionRef.current?.getSenders());
 
 
   const handleRejectCall = () => {
@@ -590,7 +541,6 @@ console.log(peerConnectionRef.current?.getSenders());
     setIsCalling(false);
   };
 const handleEndCall = (emit = true) => {
-  console.log("🔚 Ending call, emit:", emit);
   
   if (emit && selectedUser?._id) {
     socket?.emit("end-call", { to: selectedUser._id });
@@ -615,7 +565,6 @@ const handleEndCall = (emit = true) => {
 
   useEffect(()=>{
     socket?.on("newMessage",async (message)=>{
-      console.log("New message received via socket:", message);
        const storedPrivateKey = localStorage.getItem("privateKey");
     if (!storedPrivateKey) return; // cannot decrypt
 
@@ -642,7 +591,6 @@ const handleEndCall = (emit = true) => {
     if (!socket ) return;
 
     const handleIncomingCall = ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
-      console.log("Incoming call from:", from);
       setIncomingCall({ from, offer });
       
       const caller = otherUsers.find((user) => user._id === from);
@@ -652,7 +600,6 @@ const handleEndCall = (emit = true) => {
     };
 
     const handleCallAnswered = async ({ answer }: { answer: RTCSessionDescriptionInit }) => {
-      console.log("Call answered");
       try {
         if (peerConnectionRef.current) {
           await peerConnectionRef.current.setRemoteDescription(new RTCSessionDescription(answer));
@@ -676,7 +623,6 @@ const handleEndCall = (emit = true) => {
     };
 
     const handleIceCandidate = async ({ candidate }: { candidate: RTCIceCandidateInit }) => {
-      console.log("Received ICE candidate");
       try {
         if (peerConnectionRef.current && peerConnectionRef.current.remoteDescription) {
           await peerConnectionRef.current.addIceCandidate(new RTCIceCandidate(candidate));
@@ -690,14 +636,12 @@ const handleEndCall = (emit = true) => {
     };
 
     const handleCallEnded = () => {
-  console.log("☎️ Call ended by remote peer");
   setTimeout(() => {
     handleEndCall(false);
   }, 200);
 };
 
     const handleCallRejected = () => {
-      console.log("Call rejected");
       handleEndCall();
       setIsCalling(false);
       toast.error(" Call was rejected by the user.", {
@@ -734,7 +678,6 @@ const handleEndCall = (emit = true) => {
 
   const debouncedStopTyping = useMemo(() => {
     return debounce(() => {
-      console.log("Stopped typing");
       setTyping(false);
       socket?.emit("stop typing", selectedUser?._id);
     }, 2000);
@@ -791,7 +734,6 @@ const handleEndCall = (emit = true) => {
       message: plainTextMessage,
     };
       dispatch(setConversationMessage([...Messages,normalizedMessage]));
-      console.log(result.data);
       setMessage("");
       setFrontendImage("");
       setBackendImage(undefined);
