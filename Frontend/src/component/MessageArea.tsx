@@ -442,25 +442,20 @@ useEffect(() => {
 //   };
 
 
-const createPeerConnection = (isInitiator: boolean) => {
+const createPeerConnection = async (isInitiator: boolean) => {
+  const response = 
+  await fetch("https://samvaad.metered.live/api/v1/turn/credentials?apiKey=3939c2a4291d1ad57bf440ebba7b16f36534");
+
+// Saving the response in the iceServers array
+const iceServers = await response.json();
   const pc = new RTCPeerConnection({ 
     iceServers: [
+        ...iceServers,
       { urls: "stun:stun.l.google.com:19302" },
       { urls: "stun:stun1.l.google.com:19302" },
       { urls: "stun:stun2.l.google.com:19302" },
       { urls: "stun:stun3.l.google.com:19302" },
       { urls: "stun:stun4.l.google.com:19302" },
-      // Add free TURN servers for better connectivity
-      {
-  urls: "turn:turn.anyfirewall.com:443?transport=tcp",
-  username: "webrtc",
-  credential: "webrtc"
-},
-{
-  urls: "turn:turn.bistri.com:80",
-  username: "homeo",
-  credential: "homeo"
-}
 
     ],
     iceCandidatePoolSize: 10,
@@ -566,7 +561,7 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
     }
 
     // ✅ Step 3: Create peer connection before offer
-    const pc = createPeerConnection(true);
+    const pc = await createPeerConnection(true);
     peerConnectionRef.current = pc;
 
     // ✅ Step 4: Add local tracks before creating offer
@@ -637,7 +632,7 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
     }
 
     // Step 2: Create peer connection
-    const pc = createPeerConnection(false);
+    const pc = await createPeerConnection(false);
     peerConnectionRef.current = pc;
 
     // Step 3: Add local tracks FIRST (before setting remote description)
