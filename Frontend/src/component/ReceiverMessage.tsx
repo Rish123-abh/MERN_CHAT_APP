@@ -24,6 +24,7 @@ const ReceiverMessage = (props: Message) => {
                     src={props.image}
                     alt="attachment"
                     className="mb-1 h-40 w-40 rounded-lg"
+                    onClick={()=>setZoomImage(props.image)}
                 />
             )}
                         {/* Zoom modal */}
