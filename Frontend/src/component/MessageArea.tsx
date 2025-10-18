@@ -35,6 +35,9 @@ const MessageArea = () => {
     (state: RootState) => state.messageSlice.messages
   );
   const socket=useSocket();
+  // Inside your MessageArea component
+const [localStream, setLocalStream] = useState<MediaStream | null>(null);
+const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
   const { getToken } = useAuth();
   const dispatch = useDispatch();
   const [showPicker, setShowPicker] = useState<boolean>(false);
@@ -202,6 +205,24 @@ useEffect(() => {
     }
   }
 
+  // This effect handles attaching the local stream
+useEffect(() => {
+  if (localVideoRef.current && localStream) {
+    console.log("Attaching local stream to video element.");
+    localVideoRef.current.srcObject = localStream;
+  }
+}, [localStream]);
+
+// This effect handles attaching the remote stream
+useEffect(() => {
+  if (remoteVideoRef.current && remoteStream) {
+    console.log("Attaching remote stream to video element.");
+    remoteVideoRef.current.srcObject = remoteStream;
+    // We still force play here just in case
+    remoteVideoRef.current.play().catch(e => console.error("Remote play failed", e));
+  }
+}, [remoteStream]);
+
   const cleanupPeerConnection = () => {
     // Close peer connection
     if (peerConnectionRef.current) {
@@ -240,6 +261,7 @@ useEffect(() => {
 
     pc.ontrack = event => {
   console.log("Remote track received", event.streams[0]);
+  setRemoteStream(event.streams[0]);
   if (remoteVideoRef.current && event.streams[0]) {
     // 1. Attach the stream to the video element
     remoteVideoRef.current.srcObject = event.streams[0];
@@ -298,7 +320,7 @@ useEffect(() => {
           noiseSuppression: true
         }
       });
-
+      setLocalStream(localStream);
       localStreamRef.current = localStream;
       
       if (localVideoRef.current) {
@@ -349,7 +371,7 @@ useEffect(() => {
           noiseSuppression: true
         }
       });
-
+      setLocalStream(localStream);
       localStreamRef.current = localStream;
 
       if (localVideoRef.current) {
@@ -720,7 +742,7 @@ useEffect(() => {
                   ref={localVideoRef} 
                   autoPlay 
                   playsInline
-                  muted 
+                  muted
                   className="absolute bottom-4 right-4 w-32 h-24 md:w-40 md:h-32 rounded-md border-2 border-white object-cover" 
                 />
                 <button
