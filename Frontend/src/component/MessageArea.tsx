@@ -835,19 +835,62 @@ const handleEndCall = (emit = true) => {
 
           {/* Calling Screen */}
           {/* Calling Screen - Only show if not yet accepted and no local stream */}
-{isCalling && !callAccepted && !localStream && (
-  <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center z-50">
-    <div className="bg-gray-900 text-white p-6 rounded-2xl shadow-xl text-center animate-pulse">
-      <h2 className="text-xl mb-2">📞 Calling...</h2>
-      <p className="text-lg">{selectedUser?.username}</p>
-      <button
-        onClick={() => {
-          handleEndCall();
-        }}
-        className="mt-4 bg-red-500 px-5 py-2 rounded-lg hover:bg-red-600"
-      >
-        Cancel
-      </button>
+{/* Video Chat */}
+{(callAccepted || isCalling) && localStream && (
+  <div className="fixed inset-0 bg-black flex items-center justify-center z-40">
+    <div className="relative w-full h-full">
+      {/* Remote Video - Full Screen with proper aspect ratio */}
+      {remoteStream ? (
+        <video 
+          ref={remoteVideoRef} 
+          autoPlay 
+          playsInline
+          className="w-full h-full object-contain bg-black" 
+        />
+      ) : (
+        <div className="flex flex-col items-center justify-center w-full h-full bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+          <div className="animate-pulse">
+            <IoVideocam className="w-20 h-20 text-gray-600 mb-4" />
+          </div>
+          <p className="text-white text-xl font-semibold">Connecting...</p>
+          <p className="text-gray-400 text-sm mt-2">Waiting for {selectedUser?.username}</p>
+        </div>
+      )}
+      
+      {/* Local Video - Picture in Picture with better styling */}
+      <div className="absolute top-4 right-4 md:bottom-4 md:top-auto">
+        <video 
+          ref={localVideoRef} 
+          autoPlay 
+          playsInline
+          muted
+          className="w-32 h-24 md:w-64 md:h-48 rounded-xl border-4 border-white/30 object-cover shadow-2xl backdrop-blur-sm transform hover:scale-105 transition-transform duration-200" 
+        />
+        <div className="absolute bottom-2 left-2 bg-black/50 backdrop-blur-sm px-2 py-1 rounded-md">
+          <p className="text-white text-xs font-semibold">You</p>
+        </div>
+      </div>
+      
+      {/* Call Controls */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 flex gap-4">
+        <button
+          onClick={()=>handleEndCall()}
+          className="bg-red-500 hover:bg-red-600 px-8 py-4 rounded-full text-white font-semibold shadow-2xl transition-all duration-200 hover:scale-110 flex items-center gap-2"
+        >
+          <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M2 3a1 1 0 011-1h2.153a1 1 0 01.986.836l.74 4.435a1 1 0 01-.54 1.06l-1.548.773a11.037 11.037 0 006.105 6.105l.774-1.548a1 1 0 011.059-.54l4.435.74a1 1 0 01.836.986V17a1 1 0 01-1 1h-2C7.82 18 2 12.18 2 5V3z" />
+          </svg>
+          End Call
+        </button>
+      </div>
+
+      {/* Connection Status Indicator */}
+      {remoteStream && (
+        <div className="absolute top-4 left-4 bg-green-500/80 backdrop-blur-sm px-4 py-2 rounded-full flex items-center gap-2 shadow-lg">
+          <div className="w-2 h-2 bg-white rounded-full animate-pulse"></div>
+          <span className="text-white text-sm font-semibold">Connected</span>
+        </div>
+      )}
     </div>
   </div>
 )}
