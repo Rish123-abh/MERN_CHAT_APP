@@ -349,11 +349,7 @@ pc.ontrack = event => {
 
       // Request media with mobile-friendly constraints
       const localStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: "user"
-        }, 
+        video:true, 
         audio: {
           echoCancellation: true,
           noiseSuppression: true
@@ -402,11 +398,7 @@ pc.ontrack = event => {
 
       // Request media with mobile-friendly constraints
       const localStream = await navigator.mediaDevices.getUserMedia({ 
-        video: { 
-          width: { ideal: 1280 },
-          height: { ideal: 720 },
-          facingMode: "user"
-        }, 
+        video: true,
         audio: {
           echoCancellation: true,
           noiseSuppression: true
