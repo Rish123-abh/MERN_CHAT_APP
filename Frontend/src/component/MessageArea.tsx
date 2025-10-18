@@ -226,18 +226,40 @@ useEffect(() => {
   const videoEl = remoteVideoRef.current;
   if (!videoEl || !remoteStream) return;
 
-  if (videoEl.srcObject !== remoteStream) {
-    console.log("Attaching remote stream to video element:", remoteStream.id);
-    videoEl.srcObject = remoteStream;
+  // Prevent re-attaching the same stream
+  if (videoEl.srcObject === remoteStream) return;
 
-    // Delay play slightly to avoid AbortError
-    setTimeout(() => {
-      const playPromise = videoEl.play();
-      if (playPromise) {
-        playPromise.catch(err => console.warn("⚠️ Remote video autoplay prevented:", err));
-      }
-    }, 100);
+  console.log("Attaching remote stream to video element:", remoteStream.id);
+  videoEl.srcObject = remoteStream;
+
+  // Use a more reliable play approach
+  const playVideo = async () => {
+    try {
+      await videoEl.play();
+      console.log("✅ Remote video playing");
+    } catch (err) {
+      console.warn("⚠️ Remote video autoplay prevented:", err);
+      // Fallback: try again after a short delay
+      setTimeout(async () => {
+        try {
+          await videoEl.play();
+        } catch (retryErr) {
+          console.error("❌ Failed to play remote video:", retryErr);
+        }
+      }, 500);
+    }
+  };
+
+  // Wait for metadata to load before playing
+  if (videoEl.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+    playVideo();
+  } else {
+    videoEl.onloadedmetadata = playVideo;
   }
+
+  return () => {
+    videoEl.onloadedmetadata = null;
+  };
 }, [remoteStream]);
 
 
@@ -321,13 +343,18 @@ pc.ontrack = (event) => {
     };
 
     pc.oniceconnectionstatechange = () => {
-      console.log("ICE Connection State:", pc.iceConnectionState);
-      if (pc.iceConnectionState === 'disconnected' || 
-          pc.iceConnectionState === 'failed' ||
-          pc.iceConnectionState === 'closed') {
-        handleEndCall();
-      }
-    };
+  console.log("ICE Connection State:", pc.iceConnectionState);
+  
+  // Only end call on 'failed' or 'closed', not 'disconnected'
+  // 'disconnected' can be temporary during connection setup
+  if (pc.iceConnectionState === 'failed') {
+    console.log("❌ ICE Connection failed");
+    handleEndCall();
+  } else if (pc.iceConnectionState === 'closed') {
+    console.log("🔒 ICE Connection closed");
+    handleEndCall(false); // Don't emit, already closed
+  }
+};
 
     return pc;
   };
@@ -493,24 +520,23 @@ console.log(peerConnectionRef.current?.getSenders());
     setCallAccepted(false);
     setIsCalling(false);
   };
+const handleEndCall = (emit = true) => {
+  console.log("🔚 Ending call, emit:", emit);
+  
+  if (emit && selectedUser?._id) {
+    socket?.emit("end-call", { to: selectedUser._id });
+  }
 
-  const handleEndCall = (emit = true) => {
-    cleanupPeerConnection();
-
-    if (emit && selectedUser?._id) {
-      socket?.emit("end-call", { to: selectedUser._id });
-    }
-
-    // setIsCalling(false);
-    // setCallAccepted(false);
-    // setIncomingCall(null);
-     setTimeout(() => {
+  // Use setTimeout to ensure cleanup happens after state updates
+  setTimeout(() => {
     cleanupPeerConnection();
     setIsCalling(false);
     setCallAccepted(false);
     setIncomingCall(null);
-  }, 500); 
-  };
+    setLocalStream(null);
+    setRemoteStream(null);
+  }, 300); 
+};
 
   useEffect(()=>{
     if(selectedUser){
@@ -595,9 +621,11 @@ console.log(peerConnectionRef.current?.getSenders());
     };
 
     const handleCallEnded = () => {
-      console.log("Call ended by remote peer");
-      handleEndCall(false);
-    };
+  console.log("☎️ Call ended by remote peer");
+  setTimeout(() => {
+    handleEndCall(false);
+  }, 200);
+};
 
     const handleCallRejected = () => {
       console.log("Call rejected");
