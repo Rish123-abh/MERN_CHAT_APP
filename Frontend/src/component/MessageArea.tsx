@@ -437,9 +437,9 @@ useEffect(() => {
     return ()=>{socket?.off("newMessage")};
   },[Messages,dispatch,socket]);
 
-  const listenersAdded = useRef(false);
+  // const listenersAdded = useRef(false);
   useEffect(() => {
-    if (!socket || listenersAdded.current) return;
+    if (!socket ) return;
 
     const handleIncomingCall = ({ from, offer }: { from: string; offer: RTCSessionDescriptionInit }) => {
       console.log("Incoming call from:", from);
@@ -511,7 +511,7 @@ useEffect(() => {
     socket.on("call-rejected", handleCallRejected);
     socket.on("typing", handleTyping);
     socket.on("stop typing", handleStopTyping);
-    listenersAdded.current = true;
+    // listenersAdded.current = true;
     return () => {
       socket.off("incoming-call", handleIncomingCall);
       socket.off("call-answered", handleCallAnswered);
