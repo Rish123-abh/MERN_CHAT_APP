@@ -23,7 +23,6 @@ import { useSocket } from "../context/SocketProvider.tsx";
 import { useClickOutside } from "../customHooks/useClickOutside.ts";
 import { debounce } from 'lodash';
 import Lottie from "react-lottie";
-import { IoCall } from "react-icons/io5";
 import animationData from "../assets/animation/typing.json";
 import { useTheme } from "../context/useTheme.ts";
 import { decryptMessage, encryptMessage } from "../customHooks/useKeys.ts";
