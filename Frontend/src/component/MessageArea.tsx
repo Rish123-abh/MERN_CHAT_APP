@@ -360,87 +360,185 @@ useEffect(() => {
     pendingCandidatesRef.current = [];
   };
 
-  const createPeerConnection = (isInitiator: boolean) => {
-    const pc = new RTCPeerConnection({ 
-      iceServers: [
-        { urls: "stun:stun.l.google.com:19302" },
-        { urls: "stun:stun1.l.google.com:19302" }
-      ] 
-    });
+//   const createPeerConnection = (isInitiator: boolean) => {
+//     const pc = new RTCPeerConnection({ 
+//       iceServers: [
+//         { urls: "stun:stun.l.google.com:19302" },
+//         { urls: "stun:stun1.l.google.com:19302" }
+//       ] 
+//     });
     
-// pc.ontrack = event => {
+// // pc.ontrack = event => {
+// //   const [stream] = event.streams;
+// //   if (!stream) return;
+// //   console.log("🎥 Remote track received:", stream.id);
+
+// //   // Always update state
+// //   setRemoteStream(stream);
+
+// //   // Attach directly if <video> is ready
+// //   const videoEl = remoteVideoRef.current;
+// //   if (videoEl) {
+// //     if (videoEl.srcObject !== stream) {
+// //       videoEl.srcObject = stream;
+// //       const playPromise = videoEl.play();
+// //       if (playPromise) {
+// //         playPromise.catch(err => console.warn("Autoplay prevented:", err));
+// //       }
+// //     }
+// //   }
+// // };
+
+// pc.ontrack = (event) => {
 //   const [stream] = event.streams;
-//   if (!stream) return;
-//   console.log("🎥 Remote track received:", stream.id);
-
-//   // Always update state
+//   console.log("🎥 ontrack event fired:", {
+//     stream: stream?.id,
+//     tracks: stream?.getTracks().map(t => ({
+//       kind: t.kind,
+//       enabled: t.enabled,
+//       readyState: t.readyState,
+//       id: t.id
+//     })),
+//     totalStreams: event.streams.length
+//   });
+  
+//   if (!stream) {
+//     console.error("❌ No stream in ontrack event!");
+//     return;
+//   }
+  
+//   console.log("✅ Setting remote stream to state");
 //   setRemoteStream(stream);
+// };
 
-//   // Attach directly if <video> is ready
-//   const videoEl = remoteVideoRef.current;
-//   if (videoEl) {
-//     if (videoEl.srcObject !== stream) {
-//       videoEl.srcObject = stream;
-//       const playPromise = videoEl.play();
-//       if (playPromise) {
-//         playPromise.catch(err => console.warn("Autoplay prevented:", err));
+
+
+//     pc.onicecandidate = event => {
+//       if (event.candidate) {
+//         const targetId = isInitiator ? selectedUser?._id : incomingCall?.from;
+//         console.log("Sending ICE candidate to:", targetId);
+//         socket?.emit("ice-candidate", { 
+//           to: targetId, 
+//           candidate: event.candidate 
+//         });
 //       }
-//     }
+//     };
+
+//     pc.oniceconnectionstatechange = () => {
+//   console.log("ICE Connection State:", pc.iceConnectionState);
+  
+//   // Only end call on 'failed' or 'closed', not 'disconnected'
+//   // 'disconnected' can be temporary during connection setup
+//   if (pc.iceConnectionState === 'failed') {
+//     console.log("❌ ICE Connection failed");
+//     handleEndCall();
+//   } else if (pc.iceConnectionState === 'closed') {
+//     console.log("🔒 ICE Connection closed");
+//     handleEndCall(false); // Don't emit, already closed
 //   }
 // };
 
-pc.ontrack = (event) => {
-  const [stream] = event.streams;
-  console.log("🎥 ontrack event fired:", {
-    stream: stream?.id,
-    tracks: stream?.getTracks().map(t => ({
-      kind: t.kind,
-      enabled: t.enabled,
-      readyState: t.readyState,
-      id: t.id
-    })),
-    totalStreams: event.streams.length
-  });
-  
-  if (!stream) {
-    console.error("❌ No stream in ontrack event!");
-    return;
-  }
-  
-  console.log("✅ Setting remote stream to state");
-  setRemoteStream(stream);
-};
+//     return pc;
+//   };
 
 
-
-    pc.onicecandidate = event => {
-      if (event.candidate) {
-        const targetId = isInitiator ? selectedUser?._id : incomingCall?.from;
-        console.log("Sending ICE candidate to:", targetId);
-        socket?.emit("ice-candidate", { 
-          to: targetId, 
-          candidate: event.candidate 
-        });
+const createPeerConnection = (isInitiator: boolean) => {
+  const pc = new RTCPeerConnection({ 
+    iceServers: [
+      { urls: "stun:stun.l.google.com:19302" },
+      { urls: "stun:stun1.l.google.com:19302" },
+      { urls: "stun:stun2.l.google.com:19302" },
+      { urls: "stun:stun3.l.google.com:19302" },
+      { urls: "stun:stun4.l.google.com:19302" },
+      // Add free TURN servers for better connectivity
+      {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject",
+      },
+      {
+        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject",
       }
-    };
-
-    pc.oniceconnectionstatechange = () => {
-  console.log("ICE Connection State:", pc.iceConnectionState);
-  
-  // Only end call on 'failed' or 'closed', not 'disconnected'
-  // 'disconnected' can be temporary during connection setup
-  if (pc.iceConnectionState === 'failed') {
-    console.log("❌ ICE Connection failed");
-    handleEndCall();
-  } else if (pc.iceConnectionState === 'closed') {
-    console.log("🔒 ICE Connection closed");
-    handleEndCall(false); // Don't emit, already closed
-  }
-};
-
-    return pc;
+    ],
+    iceCandidatePoolSize: 10,
+  });
+    
+  pc.ontrack = (event) => {
+    const [stream] = event.streams;
+    console.log("🎥 ontrack event fired:", {
+      stream: stream?.id,
+      tracks: stream?.getTracks().map(t => ({
+        kind: t.kind,
+        enabled: t.enabled,
+        readyState: t.readyState,
+        id: t.id
+      })),
+      totalStreams: event.streams.length
+    });
+    
+    if (!stream) {
+      console.error("❌ No stream in ontrack event!");
+      return;
+    }
+    
+    console.log("✅ Setting remote stream to state");
+    setRemoteStream(stream);
   };
 
+  pc.onicecandidate = event => {
+    if (event.candidate) {
+      const targetId = isInitiator ? selectedUser?._id : incomingCall?.from;
+      console.log("📤 Sending ICE candidate to:", targetId, "Type:", event.candidate.type);
+      socket?.emit("ice-candidate", { 
+        to: targetId, 
+        candidate: event.candidate 
+      });
+    } else {
+      console.log("✅ All ICE candidates have been sent");
+    }
+  };
+
+  pc.oniceconnectionstatechange = () => {
+    console.log("🔗 ICE Connection State:", pc.iceConnectionState);
+    
+    // Give more time before considering it failed
+    if (pc.iceConnectionState === 'failed') {
+      console.log("❌ ICE Connection failed - attempting restart");
+      // Try to restart ICE
+      pc.restartIce();
+      
+      // If still failing after 5 seconds, end call
+      setTimeout(() => {
+        if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+          console.log("❌ ICE Connection permanently failed");
+          handleEndCall();
+        }
+      }, 5000);
+    } else if (pc.iceConnectionState === 'closed') {
+      console.log("🔒 ICE Connection closed");
+      handleEndCall(false);
+    } else if (pc.iceConnectionState === 'connected' || pc.iceConnectionState === 'completed') {
+      console.log("✅ ICE Connection established successfully");
+    }
+  };
+
+  pc.onconnectionstatechange = () => {
+    console.log("🔗 Connection State:", pc.connectionState);
+  };
+
+  pc.onicegatheringstatechange = () => {
+    console.log("🧊 ICE Gathering State:", pc.iceGatheringState);
+  };
+
+  return pc;
+};
   const handleStartVideoCall = async () => {
   if (!selectedUser) return;
 
