@@ -748,17 +748,17 @@ useEffect(() => {
                   autoPlay 
                   playsInline
                   muted
-                  className="absolute bottom-4 right-4 w-32 h-24 md:w-40 md:h-32 rounded-md border-2 border-white object-cover" 
+                  className="absolute bottom-4 right-4 w-32 h-24 md:w-60 md:h-52 rounded-md border-2 border-white object-cover" 
                 />
                 <button
                   onClick={()=>handleEndCall()}
-                  className="absolute top-3 right-3 bg-red-500 px-3 py-2 rounded-md text-white hover:bg-red-600"
+                  className="absolute bottom-60 right-3 bg-red-500 px-3 py-2 rounded-md text-white hover:bg-red-600"
                 >
                   End Call
                 </button>
               </div>
             </div>
-          )}
+           )}
 
           {/* Messages Area */}
           <div className="p-4 flex gap-2 flex-1 flex-col overflow-y-auto">
