@@ -239,11 +239,22 @@ useEffect(() => {
     });
 
     pc.ontrack = event => {
-      console.log("Remote track received");
-      if (remoteVideoRef.current && event.streams[0]) {
-        remoteVideoRef.current.srcObject = event.streams[0];
-      }
-    };
+  console.log("Remote track received", event.streams[0]);
+  if (remoteVideoRef.current && event.streams[0]) {
+    // 1. Attach the stream to the video element
+    remoteVideoRef.current.srcObject = event.streams[0];
+
+    // 2. Explicitly tell the video to play
+    const playPromise = remoteVideoRef.current.play();
+
+    if (playPromise !== undefined) {
+      playPromise.catch(error => {
+        console.error("Autoplay was prevented:", error);
+        // As a fallback, you could show a "Click to play" button here
+      });
+    }
+  }
+};
 
     pc.onicecandidate = event => {
       if (event.candidate) {
