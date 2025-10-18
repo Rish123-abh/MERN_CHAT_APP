@@ -1,4 +1,6 @@
 import { useSelector } from "react-redux";
+import { toast } from "react-hot-toast";
+
 import type { RootState } from "../Redux/store";
 import { IoMdArrowRoundBack } from "react-icons/io";
 import { setSelectedUser } from "../Redux/userSlice";
@@ -237,13 +239,6 @@ useEffect(() => {
   };
 }, [localStream]);
 
-// This effect handles attaching the remote stream
-// useEffect(() => {
-//   if (remoteVideoRef.current && remoteStream && !remoteVideoRef.current.srcObject) {
-//     remoteVideoRef.current.srcObject = remoteStream;
-//     remoteVideoRef.current.play().catch(err => console.warn("Autoplay warning:", err));
-//   }
-// }, [remoteStream]);
 useEffect(() => {
   const videoEl = remoteVideoRef.current;
   
@@ -359,88 +354,6 @@ useEffect(() => {
     // Clear pending candidates
     pendingCandidatesRef.current = [];
   };
-
-//   const createPeerConnection = (isInitiator: boolean) => {
-//     const pc = new RTCPeerConnection({ 
-//       iceServers: [
-//         { urls: "stun:stun.l.google.com:19302" },
-//         { urls: "stun:stun1.l.google.com:19302" }
-//       ] 
-//     });
-    
-// // pc.ontrack = event => {
-// //   const [stream] = event.streams;
-// //   if (!stream) return;
-// //   console.log("🎥 Remote track received:", stream.id);
-
-// //   // Always update state
-// //   setRemoteStream(stream);
-
-// //   // Attach directly if <video> is ready
-// //   const videoEl = remoteVideoRef.current;
-// //   if (videoEl) {
-// //     if (videoEl.srcObject !== stream) {
-// //       videoEl.srcObject = stream;
-// //       const playPromise = videoEl.play();
-// //       if (playPromise) {
-// //         playPromise.catch(err => console.warn("Autoplay prevented:", err));
-// //       }
-// //     }
-// //   }
-// // };
-
-// pc.ontrack = (event) => {
-//   const [stream] = event.streams;
-//   console.log("🎥 ontrack event fired:", {
-//     stream: stream?.id,
-//     tracks: stream?.getTracks().map(t => ({
-//       kind: t.kind,
-//       enabled: t.enabled,
-//       readyState: t.readyState,
-//       id: t.id
-//     })),
-//     totalStreams: event.streams.length
-//   });
-  
-//   if (!stream) {
-//     console.error("❌ No stream in ontrack event!");
-//     return;
-//   }
-  
-//   console.log("✅ Setting remote stream to state");
-//   setRemoteStream(stream);
-// };
-
-
-
-//     pc.onicecandidate = event => {
-//       if (event.candidate) {
-//         const targetId = isInitiator ? selectedUser?._id : incomingCall?.from;
-//         console.log("Sending ICE candidate to:", targetId);
-//         socket?.emit("ice-candidate", { 
-//           to: targetId, 
-//           candidate: event.candidate 
-//         });
-//       }
-//     };
-
-//     pc.oniceconnectionstatechange = () => {
-//   console.log("ICE Connection State:", pc.iceConnectionState);
-  
-//   // Only end call on 'failed' or 'closed', not 'disconnected'
-//   // 'disconnected' can be temporary during connection setup
-//   if (pc.iceConnectionState === 'failed') {
-//     console.log("❌ ICE Connection failed");
-//     handleEndCall();
-//   } else if (pc.iceConnectionState === 'closed') {
-//     console.log("🔒 ICE Connection closed");
-//     handleEndCall(false); // Don't emit, already closed
-//   }
-// };
-
-//     return pc;
-//   };
-
 
 const createPeerConnection = async (isInitiator: boolean) => {
   const response = 
@@ -583,18 +496,6 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
 
   } catch (error) {
     console.error("❌ Error starting video call:", error);
-
-    // // ✅ Better handling for camera timeout or permission denial
-    // if (error.name === "NotReadableError") {
-    //   alert("Your camera is busy. Close other apps (Zoom, Meet, etc.) and retry.");
-    // } else if (error.name === "NotAllowedError") {
-    //   alert("Camera or mic permission denied. Please allow access and try again.");
-    // } else if (error.name === "OverconstrainedError") {
-    //   alert("Requested camera resolution not supported. Try again without constraints.");
-    // } else {
-    //   alert("Failed to start video call. Please check permissions and try again.");
-    // }
-
     setIsCalling(false);
     cleanupPeerConnection();
   }
@@ -800,7 +701,14 @@ const handleEndCall = (emit = true) => {
       console.log("Call rejected");
       handleEndCall();
       setIsCalling(false);
-      alert("Call was rejected by the user.");
+      toast.error("📞 Call was rejected by the user.", {
+    duration: 3000,
+    style: {
+      borderRadius: "10px",
+      background: "#333",
+      color: "#fff",
+    },
+  });
     };
 
     const handleTyping = () => setIsTyping(true);
@@ -1041,32 +949,6 @@ const handleEndCall = (emit = true) => {
   </div>
 )}
 
-          {/* Video Chat */}
-          {/* {callAccepted && (
-            <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
-              <div className="relative w-full h-full flex items-center justify-center">
-                <video 
-                  ref={remoteVideoRef} 
-                  autoPlay 
-                  playsInline
-                  className="w-full h-full object-cover" 
-                />
-                <video 
-                  ref={localVideoRef} 
-                  autoPlay 
-                  playsInline
-                  muted
-                  className="absolute bottom-4 right-4 w-32 h-24 md:w-60 md:h-52 rounded-md border-2 border-white object-cover" 
-                />
-                <button
-                  onClick={()=>handleEndCall()}
-                  className="absolute bottom-30 md:bottom-60 right-3 bg-red-500 px-3 py-2 rounded-md text-white hover:bg-red-600"
-                >
-                  End Call
-                </button>
-              </div>
-            </div>
-           )} */}
            {/* Video Chat */}
 {(callAccepted || isCalling) && localStream && (
   <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
