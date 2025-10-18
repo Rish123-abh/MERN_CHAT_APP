@@ -208,18 +208,23 @@ useEffect(() => {
   // This effect handles attaching the local stream
 useEffect(() => {
   if (localVideoRef.current && localStream) {
-    console.log("Attaching local stream to video element.");
-    localVideoRef.current.srcObject = localStream;
+    if (localVideoRef.current.srcObject !== localStream) {
+      console.log("Attaching local stream to video element.");
+      localVideoRef.current.srcObject = localStream;
+    }
   }
 }, [localStream]);
 
 // This effect handles attaching the remote stream
 useEffect(() => {
   if (remoteVideoRef.current && remoteStream) {
-    console.log("Attaching remote stream to video element.");
-    remoteVideoRef.current.srcObject = remoteStream;
-    // We still force play here just in case
-    remoteVideoRef.current.play().catch(e => console.error("Remote play failed", e));
+    if (remoteVideoRef.current.srcObject !== remoteStream) {
+      console.log("Attaching remote stream to video element.");
+      remoteVideoRef.current.srcObject = remoteStream;
+      
+      // Attempt to play every time, as user interaction might be needed
+      remoteVideoRef.current.play().catch(e => console.error("Remote play failed", e));
+    }
   }
 }, [remoteStream]);
 
