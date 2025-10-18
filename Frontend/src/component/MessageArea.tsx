@@ -549,7 +549,7 @@ const createPeerConnection = (isInitiator: boolean) => {
     // ✅ Step 1: Ensure camera/mic access with stable constraints
     const localStream = await navigator.mediaDevices.getUserMedia({
       video: true,
-      audio: { echoCancellation: true, noiseSuppression: true }
+      audio: true,
     });
 
 setLocalStream(localStream);
@@ -621,7 +621,7 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
     // Step 1: Get local stream first
     const localStream = await navigator.mediaDevices.getUserMedia({
       video: true,
-      audio: { echoCancellation: true, noiseSuppression: true }
+      audio: true
     });
 
     console.log("✅ Got local stream:", localStream.id);
