@@ -701,7 +701,7 @@ const handleEndCall = (emit = true) => {
       console.log("Call rejected");
       handleEndCall();
       setIsCalling(false);
-      toast.error("📞 Call was rejected by the user.", {
+      toast.error(" Call was rejected by the user.", {
     duration: 3000,
     style: {
       borderRadius: "10px",
@@ -859,7 +859,6 @@ const handleEndCall = (emit = true) => {
             </div>
             <div className="flex gap-4">
               <IoVideocam className="w-7 h-7 cursor-pointer text-white" onClick={handleStartVideoCall} />
-              <IoCall className="w-7 h-7 cursor-pointer text-white" />
             </div>
           </div>
 
