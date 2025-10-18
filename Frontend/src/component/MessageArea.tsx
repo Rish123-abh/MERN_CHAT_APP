@@ -452,20 +452,16 @@ const createPeerConnection = (isInitiator: boolean) => {
       { urls: "stun:stun4.l.google.com:19302" },
       // Add free TURN servers for better connectivity
       {
-        urls: "turn:openrelay.metered.ca:80",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      },
-      {
-        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-        username: "openrelayproject",
-        credential: "openrelayproject",
-      }
+  urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+  username: "webrtc",
+  credential: "webrtc"
+},
+{
+  urls: "turn:turn.bistri.com:80",
+  username: "homeo",
+  credential: "homeo"
+}
+
     ],
     iceCandidatePoolSize: 10,
   });
