@@ -216,12 +216,23 @@ useEffect(() => {
 }, [localStream]);
 
 // This effect handles attaching the remote stream
+// useEffect(() => {
+//   if (remoteVideoRef.current && remoteStream && !remoteVideoRef.current.srcObject) {
+//     remoteVideoRef.current.srcObject = remoteStream;
+//     remoteVideoRef.current.play().catch(err => console.warn("Autoplay warning:", err));
+//   }
+// }, [remoteStream]);
 useEffect(() => {
-  if (remoteVideoRef.current && remoteStream && !remoteVideoRef.current.srcObject) {
-    remoteVideoRef.current.srcObject = remoteStream;
-    remoteVideoRef.current.play().catch(err => console.warn("Autoplay warning:", err));
+  const videoEl = remoteVideoRef.current;
+  if (!videoEl || !remoteStream) return;
+
+  if (videoEl.srcObject !== remoteStream) {
+    console.log("Attaching remote stream (useEffect).");
+    videoEl.srcObject = remoteStream;
+    videoEl.play().catch(err => console.warn("Autoplay warning:", err));
   }
-}, [remoteStream]);
+}, [remoteStream, remoteVideoRef.current]);
+
 
   const cleanupPeerConnection = () => {
     // Close peer connection
@@ -258,13 +269,31 @@ useEffect(() => {
         { urls: "stun:stun1.l.google.com:19302" }
       ] 
     });
-
+    
 pc.ontrack = event => {
-   const incomingStream = event.streams[0];
-  if (incomingStream) {
-    console.log("Remote track received", incomingStream);
-    setRemoteStream(incomingStream);
+  const [stream] = event.streams;
+  if (!stream) return;
+
+  console.log("Remote track received:", stream);
+
+  // If the <video> element exists, attach immediately
+  if (remoteVideoRef.current) {
+    if (remoteVideoRef.current.srcObject !== stream) {
+      remoteVideoRef.current.srcObject = stream;
+      remoteVideoRef.current.play().catch(err => console.warn("Autoplay issue:", err));
+    }
+  } else {
+    // fallback: store in state for useEffect to attach later
+    setRemoteStream(stream);
   }
+};
+
+// pc.ontrack = event => {
+//    const incomingStream = event.streams[0];
+//   if (incomingStream) {
+//     console.log("Remote track received", incomingStream);
+//     setRemoteStream(incomingStream);
+//   }
   // const incomingStream = event.streams[0];
   // if (!incomingStream) return;
 
@@ -285,7 +314,7 @@ pc.ontrack = event => {
   // } else {
   //   console.log("Remote track already attached, skipping duplicate");
   // }
-};
+// };
 
 
     pc.onicecandidate = event => {
@@ -335,6 +364,8 @@ pc.ontrack = event => {
       
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
+         localVideoRef.current.muted = true;
+  localVideoRef.current.play().catch(err => console.warn("Local autoplay issue:", err));
       }
 
       const pc = createPeerConnection(true);
@@ -386,6 +417,8 @@ pc.ontrack = event => {
 
       if (localVideoRef.current) {
         localVideoRef.current.srcObject = localStream;
+         localVideoRef.current.muted = true;
+  localVideoRef.current.play().catch(err => console.warn("Local autoplay issue:", err));
       }
 
       const pc = createPeerConnection(false);
@@ -445,9 +478,15 @@ pc.ontrack = event => {
       socket?.emit("end-call", { to: selectedUser._id });
     }
 
+    // setIsCalling(false);
+    // setCallAccepted(false);
+    // setIncomingCall(null);
+     setTimeout(() => {
+    cleanupPeerConnection();
     setIsCalling(false);
     setCallAccepted(false);
     setIncomingCall(null);
+  }, 500); 
   };
 
   useEffect(()=>{
