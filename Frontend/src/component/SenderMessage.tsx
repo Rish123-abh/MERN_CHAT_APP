@@ -1,8 +1,9 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef,useState } from "react";
 import {BsCheck2All } from "react-icons/bs";
 import type { Message } from "../Redux/messageSlice";
 
 const SenderMessage = (props: Message) => {
+    const [zoomImage, setZoomImage] = useState<string|null>(null);
     const date = new Date(props.updatedAt);
     const messageTime = (date.toLocaleTimeString('en-IN', { hour: 'numeric', minute: 'numeric' }));
     const scroll = useRef<HTMLDivElement>(null);
@@ -22,8 +23,22 @@ const SenderMessage = (props: Message) => {
                     src={props.image}
                     alt="attachment"
                     className="mb-2 h-40 w-40 rounded-lg" // Added margin-bottom
+                    onClick={()=>setZoomImage(props.image)}
                 />
             )}
+            {/* Zoom modal */}
+      {zoomImage && (
+        <div
+          className="fixed inset-0 bg-black/80 flex justify-center items-center z-50"
+          onClick={() => setZoomImage(null)}
+        >
+          <img
+            src={zoomImage}
+            alt="zoomed"
+            className="max-h-[90vh] max-w-[90vw] rounded-xl shadow-lg transition-transform duration-300 transform scale-100 hover:scale-105"
+          />
+        </div>
+      )}
             {props?.message && (
                 // 2. Add padding to the right to make space for the timestamp
                 <span className="pr-16">{props.message}</span>
