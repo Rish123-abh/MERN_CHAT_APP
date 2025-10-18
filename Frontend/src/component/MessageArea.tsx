@@ -353,9 +353,12 @@ pc.ontrack = (event) => {
     if (localEl) {
       localEl.srcObject = localStream;
       localEl.muted = true;
-      setTimeout(() => {
-        localEl.play().catch(err => console.warn("Local autoplay prevented:", err));
-      }, 300);
+      await new Promise<void>((resolve) => {
+        localEl.onloadedmetadata = () => {
+          localEl.play().catch(() => {}); // ignore autoplay errors
+          resolve();
+        };
+      });
     }
 
     // ✅ Step 3: Create peer connection before offer
@@ -420,10 +423,13 @@ pc.ontrack = (event) => {
     if (localEl) {
       localEl.srcObject = localStream;
       localEl.muted = true;
-      setTimeout(() => {
-        localEl.play().catch(err => console.warn("Local autoplay issue:", err));
-      }, 300); // small delay avoids race with srcObject load
-    }
+      await new Promise<void>((resolve) => {
+    localEl.onloadedmetadata = () => {
+      localEl.play().catch(() => {});
+      resolve();
+    };
+  });
+  }
 
     // ✅ Step 3: Create RTCPeerConnection before setting remote desc
     const pc = createPeerConnection(false);
@@ -473,6 +479,7 @@ pc.ontrack = (event) => {
     handleRejectCall();
   }
 };
+console.log(peerConnectionRef.current?.getSenders());
 
 
   const handleRejectCall = () => {
