@@ -3,7 +3,7 @@ import { getAllUsers, getOrCreateUser, searchUsers } from '../../controllers/Use
 import { requireAuth } from '@clerk/express';
 const router = Router();
 router.get('/getAllUsers',requireAuth(),getAllUsers);
-router.get('/get-or-create-user',requireAuth(),getOrCreateUser);
+router.post('/get-or-create-user',requireAuth(),getOrCreateUser);
 // router.get('/getUser',requireAuth(),getCurrentUser);
 router.get('/search',requireAuth(),searchUsers);
 // router.post('/setPublicKey',requireAuth(),publicKeySaveinDb);
