@@ -207,12 +207,34 @@ useEffect(() => {
 
   // This effect handles attaching the local stream
 useEffect(() => {
-  if (localVideoRef.current && localStream) {
-    if (localVideoRef.current.srcObject !== localStream) {
-      console.log("Attaching local stream to video element.");
-      localVideoRef.current.srcObject = localStream;
+  const videoEl = localVideoRef.current;
+  if (!videoEl || !localStream) return;
+
+  if (videoEl.srcObject !== localStream) {
+    console.log("Attaching local stream to video element.");
+    videoEl.srcObject = localStream;
+    videoEl.muted = true;
+    
+    // Ensure video plays
+    const playVideo = async () => {
+      try {
+        await videoEl.play();
+        console.log("✅ Local video playing");
+      } catch (err) {
+        console.warn("⚠️ Local video autoplay prevented:", err);
+      }
+    };
+
+    if (videoEl.readyState >= 2) {
+      playVideo();
+    } else {
+      videoEl.onloadedmetadata = playVideo;
     }
   }
+
+  return () => {
+    if (videoEl) videoEl.onloadedmetadata = null;
+  };
 }, [localStream]);
 
 // This effect handles attaching the remote stream
@@ -372,8 +394,9 @@ pc.ontrack = (event) => {
       audio: { echoCancellation: true, noiseSuppression: true }
     });
 
-    setLocalStream(localStream);
-    localStreamRef.current = localStream;
+setLocalStream(localStream);
+localStreamRef.current = localStream;
+console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getTracks().length);
 
     // ✅ Step 2: Attach local video with slight delay (avoids autoplay AbortError)
     const localEl = localVideoRef.current;
@@ -441,9 +464,9 @@ pc.ontrack = (event) => {
       video: true,
       audio: { echoCancellation: true, noiseSuppression: true }
     });
-
-    setLocalStream(localStream);
-    localStreamRef.current = localStream;
+setLocalStream(localStream);
+localStreamRef.current = localStream;
+console.log("✅ Local stream set (accepter):", localStream.id, "Tracks:", localStream.getTracks().length);
 
     // ✅ Step 2: Attach local video (with delay for autoplay handling)
     const localEl = localVideoRef.current;
@@ -811,25 +834,26 @@ const handleEndCall = (emit = true) => {
           )}
 
           {/* Calling Screen */}
-          {isCalling && !callAccepted && (
-            <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center z-50">
-              <div className="bg-gray-900 text-white p-6 rounded-2xl shadow-xl text-center animate-pulse">
-                <h2 className="text-xl mb-2">📞 Calling...</h2>
-                <p className="text-lg">{selectedUser?.username}</p>
-                <button
-                  onClick={() => {
-                    handleEndCall();
-                  }}
-                  className="mt-4 bg-red-500 px-5 py-2 rounded-lg hover:bg-red-600"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Calling Screen - Only show if not yet accepted and no local stream */}
+{isCalling && !callAccepted && !localStream && (
+  <div className="fixed inset-0 bg-black/60 flex flex-col items-center justify-center z-50">
+    <div className="bg-gray-900 text-white p-6 rounded-2xl shadow-xl text-center animate-pulse">
+      <h2 className="text-xl mb-2">📞 Calling...</h2>
+      <p className="text-lg">{selectedUser?.username}</p>
+      <button
+        onClick={() => {
+          handleEndCall();
+        }}
+        className="mt-4 bg-red-500 px-5 py-2 rounded-lg hover:bg-red-600"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+)}
 
           {/* Video Chat */}
-          {callAccepted && (
+          {/* {callAccepted && (
             <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
               <div className="relative w-full h-full flex items-center justify-center">
                 <video 
@@ -853,7 +877,43 @@ const handleEndCall = (emit = true) => {
                 </button>
               </div>
             </div>
-           )}
+           )} */}
+           {/* Video Chat */}
+{(callAccepted || isCalling) && localStream && (
+  <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-40">
+    <div className="relative w-full h-full flex items-center justify-center">
+      {/* Remote Video - Full Screen */}
+      {remoteStream ? (
+        <video 
+          ref={remoteVideoRef} 
+          autoPlay 
+          playsInline
+          className="w-full h-full object-cover" 
+        />
+      ) : (
+        <div className="flex items-center justify-center w-full h-full bg-gray-900">
+          <p className="text-white text-xl">Connecting...</p>
+        </div>
+      )}
+      
+      {/* Local Video - Picture in Picture */}
+      <video 
+        ref={localVideoRef} 
+        autoPlay 
+        playsInline
+        muted
+        className="absolute bottom-4 right-4 w-32 h-24 md:w-60 md:h-52 rounded-md border-2 border-white object-cover shadow-lg" 
+      />
+      
+      <button
+        onClick={()=>handleEndCall()}
+        className="absolute bottom-4 left-1/2 transform -translate-x-1/2 bg-red-500 px-6 py-3 rounded-full text-white hover:bg-red-600 shadow-lg"
+      >
+        End Call
+      </button>
+    </div>
+  </div>
+)}
 
           {/* Messages Area */}
           <div className="p-4 flex gap-2 flex-1 flex-col overflow-y-auto">
