@@ -233,6 +233,22 @@ useEffect(() => {
   }
 }, [remoteStream, remoteVideoRef.current]);
 
+useEffect(() => {
+  const videoEl = remoteVideoRef.current;
+  if (!videoEl || !remoteStream) return;
+
+  console.log("🔄 Attaching remote stream (useEffect):", remoteStream.id);
+
+  if (videoEl.srcObject !== remoteStream) {
+    videoEl.srcObject = remoteStream;
+  }
+
+  const playPromise = videoEl.play();
+  if (playPromise) {
+    playPromise.catch(err => console.warn("⚠️ Remote video autoplay prevented:", err));
+  }
+}, [remoteStream]);
+
 
   const cleanupPeerConnection = () => {
     // Close peer connection
@@ -273,20 +289,24 @@ useEffect(() => {
 pc.ontrack = event => {
   const [stream] = event.streams;
   if (!stream) return;
+  console.log("🎥 Remote track received:", stream.id);
 
-  console.log("Remote track received:", stream);
+  // Always update state
+  setRemoteStream(stream);
 
-  // If the <video> element exists, attach immediately
-  if (remoteVideoRef.current) {
-    if (remoteVideoRef.current.srcObject !== stream) {
-      remoteVideoRef.current.srcObject = stream;
-      remoteVideoRef.current.play().catch(err => console.warn("Autoplay issue:", err));
+  // Attach directly if <video> is ready
+  const videoEl = remoteVideoRef.current;
+  if (videoEl) {
+    if (videoEl.srcObject !== stream) {
+      videoEl.srcObject = stream;
+      const playPromise = videoEl.play();
+      if (playPromise) {
+        playPromise.catch(err => console.warn("Autoplay prevented:", err));
+      }
     }
-  } else {
-    // fallback: store in state for useEffect to attach later
-    setRemoteStream(stream);
   }
 };
+
 
 // pc.ontrack = event => {
 //    const incomingStream = event.streams[0];
@@ -341,115 +361,147 @@ pc.ontrack = event => {
   };
 
   const handleStartVideoCall = async () => {
-    if (!selectedUser) return;
+  if (!selectedUser) return;
 
-    try {
-      cleanupPeerConnection();
-      setIsCalling(true);
+  try {
+    cleanupPeerConnection();
+    setIsCalling(true);
 
-      // Request media with mobile-friendly constraints
-      const localStream = await navigator.mediaDevices.getUserMedia({ 
-        video:true, 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }
-      });
-      setLocalStream(localStream);
-      localStreamRef.current = localStream;
-      
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStream;
-         localVideoRef.current.muted = true;
-  localVideoRef.current.play().catch(err => console.warn("Local autoplay issue:", err));
-      }
+    // ✅ Step 1: Ensure camera/mic access with stable constraints
+    const localStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: { echoCancellation: true, noiseSuppression: true }
+    });
 
-      const pc = createPeerConnection(true);
-      peerConnectionRef.current = pc;
+    setLocalStream(localStream);
+    localStreamRef.current = localStream;
 
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
-      });
-
-      const offer = await pc.createOffer();
-      await pc.setLocalDescription(offer);
-
-      console.log("Sending call to:", selectedUser._id);
-      socket?.emit("call-user", { 
-        to: selectedUser._id, 
-        offer,
-        from: currentUser?._id 
-      });
-
-    } catch (error) {
-      console.error("Error starting video call:", error);
-      alert("Failed to access camera/microphone. Please check permissions.");
-      setIsCalling(false);
-      cleanupPeerConnection();
+    // ✅ Step 2: Attach local video with slight delay (avoids autoplay AbortError)
+    const localEl = localVideoRef.current;
+    if (localEl) {
+      localEl.srcObject = localStream;
+      localEl.muted = true;
+      setTimeout(() => {
+        localEl.play().catch(err => console.warn("Local autoplay prevented:", err));
+      }, 300);
     }
-  };
+
+    // ✅ Step 3: Create peer connection before offer
+    const pc = createPeerConnection(true);
+    peerConnectionRef.current = pc;
+
+    // ✅ Step 4: Add local tracks before creating offer
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+
+    // ✅ Step 5: Create and set offer only after tracks are added
+    const offer = await pc.createOffer({ offerToReceiveAudio: true, offerToReceiveVideo: true });
+    await pc.setLocalDescription(offer);
+
+    // ✅ Step 6: Send offer through signaling
+    console.log("📞 Sending call to:", selectedUser._id);
+    socket?.emit("call-user", { 
+      to: selectedUser._id, 
+      offer,
+      from: currentUser?._id 
+    });
+
+  } catch (error) {
+    console.error("❌ Error starting video call:", error);
+
+    // // ✅ Better handling for camera timeout or permission denial
+    // if (error.name === "NotReadableError") {
+    //   alert("Your camera is busy. Close other apps (Zoom, Meet, etc.) and retry.");
+    // } else if (error.name === "NotAllowedError") {
+    //   alert("Camera or mic permission denied. Please allow access and try again.");
+    // } else if (error.name === "OverconstrainedError") {
+    //   alert("Requested camera resolution not supported. Try again without constraints.");
+    // } else {
+    //   alert("Failed to start video call. Please check permissions and try again.");
+    // }
+
+    setIsCalling(false);
+    cleanupPeerConnection();
+  }
+};
+
 
   const handleAcceptCall = async () => {
-    if (!incomingCall) return;
+  if (!incomingCall) return;
 
-    try {
-      cleanupPeerConnection();
-      setCallAccepted(true);
+  try {
+    cleanupPeerConnection();
+    setCallAccepted(true);
 
-      // Request media with mobile-friendly constraints
-      const localStream = await navigator.mediaDevices.getUserMedia({ 
-        video: true,
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true
-        }
-      });
-      setLocalStream(localStream);
-      localStreamRef.current = localStream;
+    // ✅ Step 1: Ensure camera/mic access with better constraints
+    const localStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "user", width: { ideal: 640 }, height: { ideal: 480 } },
+      audio: { echoCancellation: true, noiseSuppression: true }
+    });
 
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = localStream;
-         localVideoRef.current.muted = true;
-  localVideoRef.current.play().catch(err => console.warn("Local autoplay issue:", err));
-      }
+    setLocalStream(localStream);
+    localStreamRef.current = localStream;
 
-      const pc = createPeerConnection(false);
-      peerConnectionRef.current = pc;
-
-      localStream.getTracks().forEach(track => {
-        pc.addTrack(track, localStream);
-      });
-
-      // Set remote description first
-      await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
-
-      // Add any pending ICE candidates
-      for (const candidate of pendingCandidatesRef.current) {
-        try {
-          await pc.addIceCandidate(candidate);
-        } catch (err) {
-          console.error("Error adding pending candidate:", err);
-        }
-      }
-      pendingCandidatesRef.current = [];
-
-      const answer = await pc.createAnswer();
-      await pc.setLocalDescription(answer);
-
-      console.log("Sending answer to:", incomingCall.from);
-      socket?.emit("answer-call", { 
-        to: incomingCall.from, 
-        answer 
-      });
-
-      setIncomingCall(null);
-
-    } catch (error) {
-      console.error("Error accepting call:", error);
-      alert("Failed to accept call. Please check permissions.");
-      handleRejectCall();
+    // ✅ Step 2: Attach local video (with delay for autoplay handling)
+    const localEl = localVideoRef.current;
+    if (localEl) {
+      localEl.srcObject = localStream;
+      localEl.muted = true;
+      setTimeout(() => {
+        localEl.play().catch(err => console.warn("Local autoplay issue:", err));
+      }, 300); // small delay avoids race with srcObject load
     }
-  };
+
+    // ✅ Step 3: Create RTCPeerConnection before setting remote desc
+    const pc = createPeerConnection(false);
+    peerConnectionRef.current = pc;
+
+    // ✅ Step 4: Add local tracks BEFORE setting remote description
+    localStream.getTracks().forEach(track => {
+      pc.addTrack(track, localStream);
+    });
+
+    // ✅ Step 5: Apply the remote offer
+    await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
+
+    // ✅ Step 6: Safely add any pending ICE candidates (after remote desc)
+    for (const candidate of pendingCandidatesRef.current) {
+      try {
+        await pc.addIceCandidate(candidate);
+      } catch (err) {
+        console.error("Error adding pending candidate:", err);
+      }
+    }
+    pendingCandidatesRef.current = [];
+
+    // ✅ Step 7: Create and send the answer
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+
+    console.log("Sending answer to:", incomingCall.from);
+    socket?.emit("answer-call", { 
+      to: incomingCall.from, 
+      answer 
+    });
+
+    setIncomingCall(null);
+  } catch (error) {
+    console.error("Error accepting call:", error);
+
+    // ✅ Improved error message for "Timeout starting video source"
+    // if (error.name === "NotReadableError") {
+    //   alert("Your camera is busy. Close other apps (Zoom, Meet, etc.) and retry.");
+    // } else if (error.name === "NotAllowedError") {
+    //   alert("Camera or mic permission denied. Please allow access and try again.");
+    // } else {
+    //   alert("Failed to accept call. Please check permissions and retry.");
+    // }
+
+    handleRejectCall();
+  }
+};
+
 
   const handleRejectCall = () => {
     cleanupPeerConnection();
