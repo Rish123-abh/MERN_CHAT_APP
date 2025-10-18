@@ -246,25 +246,44 @@ useEffect(() => {
 // }, [remoteStream]);
 useEffect(() => {
   const videoEl = remoteVideoRef.current;
+  
+  console.log("🎬 Remote stream effect triggered:", {
+    hasVideoEl: !!videoEl,
+    hasRemoteStream: !!remoteStream,
+    streamId: remoteStream?.id,
+    trackCount: remoteStream?.getTracks().length
+  });
+
   if (!videoEl || !remoteStream) return;
 
   // Prevent re-attaching the same stream
-  if (videoEl.srcObject === remoteStream) return;
+  if (videoEl.srcObject === remoteStream) {
+    console.log("⚠️ Stream already attached, skipping");
+    return;
+  }
 
-  console.log("Attaching remote stream to video element:", remoteStream.id);
+  console.log("📺 Attaching remote stream to video element:", remoteStream.id);
+  console.log("📺 Remote stream tracks:", remoteStream.getTracks().map(t => ({
+    kind: t.kind,
+    enabled: t.enabled,
+    readyState: t.readyState
+  })));
+
   videoEl.srcObject = remoteStream;
 
   // Use a more reliable play approach
   const playVideo = async () => {
     try {
+      console.log("▶️ Attempting to play remote video...");
       await videoEl.play();
-      console.log("✅ Remote video playing");
+      console.log("✅ Remote video playing successfully");
     } catch (err) {
       console.warn("⚠️ Remote video autoplay prevented:", err);
       // Fallback: try again after a short delay
       setTimeout(async () => {
         try {
           await videoEl.play();
+          console.log("✅ Remote video playing (retry)");
         } catch (retryErr) {
           console.error("❌ Failed to play remote video:", retryErr);
         }
@@ -274,9 +293,14 @@ useEffect(() => {
 
   // Wait for metadata to load before playing
   if (videoEl.readyState >= 2) { // HAVE_CURRENT_DATA or higher
+    console.log("✅ Video ready state sufficient, playing now");
     playVideo();
   } else {
-    videoEl.onloadedmetadata = playVideo;
+    console.log("⏳ Waiting for video metadata...");
+    videoEl.onloadedmetadata = () => {
+      console.log("✅ Video metadata loaded");
+      playVideo();
+    };
   }
 
   return () => {
@@ -284,7 +308,30 @@ useEffect(() => {
   };
 }, [remoteStream]);
 
+useEffect(() => {
+  const pc = peerConnectionRef.current;
+  if (!pc) return;
 
+  const logConnectionState = () => {
+    console.log("🔗 Connection States:", {
+      iceConnection: pc.iceConnectionState,
+      connection: pc.connectionState,
+      signaling: pc.signalingState,
+      localDescription: !!pc.localDescription,
+      remoteDescription: !!pc.remoteDescription
+    });
+  };
+
+  pc.addEventListener('iceconnectionstatechange', logConnectionState);
+  pc.addEventListener('connectionstatechange', logConnectionState);
+  pc.addEventListener('signalingstatechange', logConnectionState);
+
+  return () => {
+    pc.removeEventListener('iceconnectionstatechange', logConnectionState);
+    pc.removeEventListener('connectionstatechange', logConnectionState);
+    pc.removeEventListener('signalingstatechange', logConnectionState);
+  };
+}, [peerConnectionRef.current]);
   const cleanupPeerConnection = () => {
     // Close peer connection
     if (peerConnectionRef.current) {
@@ -344,10 +391,23 @@ useEffect(() => {
 
 pc.ontrack = (event) => {
   const [stream] = event.streams;
-  if (!stream) return;
-  console.log("🎥 Remote track received:", stream.id);
-
-  // Only update state, useEffect handles attaching to <video>
+  console.log("🎥 ontrack event fired:", {
+    stream: stream?.id,
+    tracks: stream?.getTracks().map(t => ({
+      kind: t.kind,
+      enabled: t.enabled,
+      readyState: t.readyState,
+      id: t.id
+    })),
+    totalStreams: event.streams.length
+  });
+  
+  if (!stream) {
+    console.error("❌ No stream in ontrack event!");
+    return;
+  }
+  
+  console.log("✅ Setting remote stream to state");
   setRemoteStream(stream);
 };
 
@@ -456,44 +516,49 @@ console.log("✅ Local stream set:", localStream.id, "Tracks:", localStream.getT
   if (!incomingCall) return;
 
   try {
+    console.log("📞 Accepting call from:", incomingCall.from);
     cleanupPeerConnection();
     setCallAccepted(true);
 
-    // ✅ Step 1: Ensure camera/mic access with better constraints
+    // Step 1: Get local stream first
     const localStream = await navigator.mediaDevices.getUserMedia({
       video: true,
       audio: { echoCancellation: true, noiseSuppression: true }
     });
-setLocalStream(localStream);
-localStreamRef.current = localStream;
-console.log("✅ Local stream set (accepter):", localStream.id, "Tracks:", localStream.getTracks().length);
 
-    // ✅ Step 2: Attach local video (with delay for autoplay handling)
+    console.log("✅ Got local stream:", localStream.id);
+    setLocalStream(localStream);
+    localStreamRef.current = localStream;
+
     const localEl = localVideoRef.current;
     if (localEl) {
       localEl.srcObject = localStream;
       localEl.muted = true;
       await new Promise<void>((resolve) => {
-    localEl.onloadedmetadata = () => {
-      localEl.play().catch(() => {});
-      resolve();
-    };
-  });
-  }
+        localEl.onloadedmetadata = () => {
+          localEl.play().catch(() => {});
+          resolve();
+        };
+      });
+    }
 
-    // ✅ Step 3: Create RTCPeerConnection before setting remote desc
+    // Step 2: Create peer connection
     const pc = createPeerConnection(false);
     peerConnectionRef.current = pc;
 
-    // ✅ Step 4: Add local tracks BEFORE setting remote description
+    // Step 3: Add local tracks FIRST (before setting remote description)
+    console.log("➕ Adding local tracks to peer connection");
     localStream.getTracks().forEach(track => {
-      pc.addTrack(track, localStream);
+      const sender = pc.addTrack(track, localStream);
+      console.log(`Added ${track.kind} track:`, sender);
     });
 
-    // ✅ Step 5: Apply the remote offer
+    // Step 4: Set remote description
+    console.log("📥 Setting remote description (offer)");
     await pc.setRemoteDescription(new RTCSessionDescription(incomingCall.offer));
 
-    // ✅ Step 6: Safely add any pending ICE candidates (after remote desc)
+    // Step 5: Add pending ICE candidates
+    console.log("🧊 Processing", pendingCandidatesRef.current.length, "pending ICE candidates");
     for (const candidate of pendingCandidatesRef.current) {
       try {
         await pc.addIceCandidate(candidate);
@@ -503,29 +568,21 @@ console.log("✅ Local stream set (accepter):", localStream.id, "Tracks:", local
     }
     pendingCandidatesRef.current = [];
 
-    // ✅ Step 7: Create and send the answer
+    // Step 6: Create and send answer
+    console.log("📤 Creating answer");
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
 
-    console.log("Sending answer to:", incomingCall.from);
+    console.log("📤 Sending answer to:", incomingCall.from);
     socket?.emit("answer-call", { 
       to: incomingCall.from, 
       answer 
     });
 
     setIncomingCall(null);
+    console.log("✅ Call accepted successfully");
   } catch (error) {
-    console.error("Error accepting call:", error);
-
-    // ✅ Improved error message for "Timeout starting video source"
-    // if (error.name === "NotReadableError") {
-    //   alert("Your camera is busy. Close other apps (Zoom, Meet, etc.) and retry.");
-    // } else if (error.name === "NotAllowedError") {
-    //   alert("Camera or mic permission denied. Please allow access and try again.");
-    // } else {
-    //   alert("Failed to accept call. Please check permissions and retry.");
-    // }
-
+    console.error("❌ Error accepting call:", error);
     handleRejectCall();
   }
 };
