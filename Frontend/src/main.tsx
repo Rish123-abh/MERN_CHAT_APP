@@ -9,7 +9,7 @@ import { SocketProvider } from './context/SocketProvider';
 import { ThemeProvider } from './context/ThemeProvider.tsx';
 import { dark } from "@clerk/themes";
 import { useTheme } from './context/useTheme.ts';
-
+import { Toaster } from 'react-hot-toast';
 export const Root = () => {
   const { theme } = useTheme();
 
@@ -22,6 +22,7 @@ export const Root = () => {
     >
       <Provider store={store}>
         <SocketProvider>
+          <Toaster position="top-center" reverseOrder={false} />
           <App />
         </SocketProvider>
       </Provider>
