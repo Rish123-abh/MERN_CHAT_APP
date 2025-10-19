@@ -128,14 +128,14 @@ export const getOrCreateUser = async (req: Request, res: Response) => {
     const userId = auth.userId;
     const clerkUser = auth.user;
     const { publicKey } = req.body;
-
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     // "Get or Create" the user in one atomic operation.
     const dbUser = await User.findOneAndUpdate(
       { clerkId: userId },
       {
         $setOnInsert: { // Only sets these fields when creating a NEW user
           clerkId: userId,
-          username: clerkUser?.username || 'Anonymous',
+          username: clerkUser?.username || `Anonymous${randomSuffix}`,
           email: clerkUser?.emailAddresses[0]?.emailAddress || '',
           image: clerkUser?.imageUrl || ''
         },
