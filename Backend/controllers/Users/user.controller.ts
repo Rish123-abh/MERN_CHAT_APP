@@ -127,6 +127,7 @@ export const getOrCreateUser = async (req: Request, res: Response) => {
     const auth = req.auth?.() as { userId: string; user?: any };
     const userId = auth.userId;
     const clerkUser = auth.user;
+    console.log("Clerk User Info:", clerkUser);
     const { publicKey } = req.body;
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     // "Get or Create" the user in one atomic operation.
