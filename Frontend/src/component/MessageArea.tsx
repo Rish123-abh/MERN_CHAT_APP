@@ -770,7 +770,7 @@ const handleEndCall = (emit = true) => {
     <div
       className={`${
         selectedUser ? "flex flex-col" : "hidden"
-      } lg:flex lg:flex-col w-full lg:w-[70%] h-[93%] lg:h-[90%] ${theme==='dark'?"bg-gray-900":"bg-slate-300"}  border-l-2 border-gray-300`}
+      } lg:flex lg:flex-col w-full lg:w-[70%] h-[90%]  ${theme==='dark'?"bg-gray-900":"bg-slate-300"}  border-l-2 border-gray-300`}
     >
       {selectedUser ? (
         <>
