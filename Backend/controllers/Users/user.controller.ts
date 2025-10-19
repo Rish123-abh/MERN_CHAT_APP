@@ -2,6 +2,7 @@ import { Request, Response } from 'express';
 import User, { IUser } from '../../models/user.model.js';
 import { Webhook } from 'svix';
 import Conversation from '../../models/conversation.model.js';
+import {clerkClient} from '@clerk/clerk-sdk-node';
 
 export const verifyClerkWebhook = async(req: Request, res: Response) => {
   const CLERK_WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET || '';
@@ -126,8 +127,10 @@ export const getOrCreateUser = async (req: Request, res: Response) => {
     // After the check above, assert the auth object shape and extract safely.
     const auth = req.auth?.() as { userId: string; user?: any };
     const userId = auth.userId;
-    const clerkUser = auth.user;
-    console.log("Clerk User Info:", clerkUser);
+    const clerkUser = await clerkClient.users.getUser(userId);
+    console.log("Fetched Clerk User Info:", clerkUser);
+    // const clerkUser = auth.user;
+    // console.log("Clerk User Info:", clerkUser);
     const { publicKey } = req.body;
     const randomSuffix = Math.floor(1000 + Math.random() * 9000);
     // "Get or Create" the user in one atomic operation.
