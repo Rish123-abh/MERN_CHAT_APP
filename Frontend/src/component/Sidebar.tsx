@@ -15,8 +15,9 @@ const Sidebar = () => {
     const { getToken } = useAuth();
     const [searchUser,setSearchUser]=useState<User[]>();
     const [search, setSearch] = useState<string>("");
+    const currentUser=useSelector((state:RootState)=>state.userSlice.currentUser);
     const friends = useSelector((state: RootState) => state.userSlice.otherUsers);
-    const messages=useSelector((state: RootState)=>state.messageSlice.messages);
+    // const messages=useSelector((state: RootState)=>state.messageSlice.messages);
     const {selectedUser,onlineUsers}=useSelector((state:RootState)=>state.userSlice);
 
     const changeSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,7 +73,7 @@ const Sidebar = () => {
             }
         }
         fetchFriends();
-    }, [getToken,messages,dispatch]);
+    }, [getToken,currentUser,dispatch]);
 const handleCrossClick=()=>{
     setSearch("");
     setSearchUser([]);
